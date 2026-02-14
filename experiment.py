@@ -112,37 +112,43 @@ def main():
                 if global_step % args.log_interval == 0:
                     progress_bar.set_postfix({"loss": f"{loss.item():.4f}"})
                     with open(log_file, "a") as f:
-                        f.write(f"{epoch},{global_step},{loss.item()},{time.time() - start_time}\n")
-                
-                # Sanity check: Break early for demonstration if it works
-                if global_step >= 50:
-                    print("Sanity check limit reached (50 steps). Stopping training.")
-                    break
+                        f.write(f"{epoch},{global_step},{loss.item()},,{time.time() - start_time}\n")
             
-            if global_step >= 50:
-                break
-
-            # Validation (skipped for sanity check quick run)
+            # Validation
+            model.eval()
+            val_loss = 0
+            with torch.no_grad():
+                for x, y in val_loader:
+                    x, y = x.to(device), y.to(device)
+                    output = model(x)
+                    loss = criterion(output.view(-1, vocab_size), y.view(-1))
+                    val_loss += loss.item()
             
-        # Save checkpoint
-        checkpoint_path = os.path.join(args.save_dir, "model_sanity_check.pt")
-        torch.save(model.state_dict(), checkpoint_path)
-        print(f"Saved checkpoint to {checkpoint_path}")
+            val_loss /= len(val_loader)
+            print(f"Epoch {epoch+1} Val Loss: {val_loss:.4f}")
+            
+            with open(log_file, "a") as f:
+                f.write(f"{epoch},{global_step},,{val_loss},{time.time() - start_time}\n")
 
-        if args.push_to_hub and args.hf_repo_id:
-            print(f"Pushing to Hugging Face Hub: {args.hf_repo_id}...")
-            try:
-                api = HfApi()
-                create_repo(repo_id=args.hf_repo_id, exist_ok=True)
-                api.upload_file(
-                    path_or_fileobj=checkpoint_path,
-                    path_in_repo=f"model_epoch_{epoch+1}.pt",
-                    repo_id=args.hf_repo_id,
-                    repo_type="model"
-                )
-                print("Upload successful!")
-            except Exception as e:
-                print(f"Failed to push to HF Hub: {e}")
+            # Save checkpoint
+            checkpoint_path = os.path.join(args.save_dir, f"model_epoch_{epoch+1}.pt")
+            torch.save(model.state_dict(), checkpoint_path)
+            print(f"Saved checkpoint to {checkpoint_path}")
+
+            if args.push_to_hub and args.hf_repo_id:
+                print(f"Pushing to Hugging Face Hub: {args.hf_repo_id}...")
+                try:
+                    api = HfApi()
+                    create_repo(repo_id=args.hf_repo_id, exist_ok=True)
+                    api.upload_file(
+                        path_or_fileobj=checkpoint_path,
+                        path_in_repo=f"model_epoch_{epoch+1}.pt",
+                        repo_id=args.hf_repo_id,
+                        repo_type="model"
+                    )
+                    print("Upload successful!")
+                except Exception as e:
+                    print(f"Failed to push to HF Hub: {e}")
 
     except KeyboardInterrupt:
         print("Training interrupted.")
