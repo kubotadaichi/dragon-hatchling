@@ -1,0 +1,16 @@
+[project]
+name = "dragon-hatchling"
+version = "0.1.0"
+description = "A Dragon Hatchling (BDH) implementation."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "torch",
+    "datasets",
+    "transformers",
+    "pandas",
+    "matplotlib",
+    "tqdm",
+    "huggingface-hub",
+]
+
