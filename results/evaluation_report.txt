@@ -1,0 +1,3 @@
+Model: daichi202/dragon-hatchling
+Validation Loss: 1.2365
+Perplexity: 3.4434
